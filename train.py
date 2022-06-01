@@ -19,7 +19,7 @@ def sorted_alphanumeric(data):
 # defining the size of the image
 SIZE = 160
 color_img = []
-path = './newDataset/color'
+path = './dataset2/color'
 files = os.listdir(path)
 files = sorted_alphanumeric(files)
 for i in tqdm(files):    
@@ -30,13 +30,13 @@ for i in tqdm(files):
         # open cv reads images in BGR format so we have to convert it to RGB
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         #resizing image
-        img = cv2.resize(img, (SIZE+80, SIZE))[0:160, 40:200]
+        img = cv2.resize(img, (int(SIZE*3/2), SIZE))[0:SIZE, int(SIZE/4):int(SIZE/4*5)]
         img = img.astype('float32') / 255.0
         color_img.append(img_to_array(img))
 
 
 gray_img = []
-path = './newDataset/gray'
+path = './dataset2/gray'
 files = os.listdir(path)
 files = sorted_alphanumeric(files)
 for i in tqdm(files):
@@ -46,7 +46,7 @@ for i in tqdm(files):
         img = cv2.imread(path + '/'+i,1)
 
         #resizing image
-        img = cv2.resize(img, (SIZE+80, SIZE))[0:160, 40:200]
+        img = cv2.resize(img, (int(SIZE*3/2), SIZE))[0:SIZE, int(SIZE/4):int(SIZE/4*5)]
         img = img.astype('float32') / 255.0
         gray_img.append(img_to_array(img))
 
@@ -86,7 +86,7 @@ def up(filters, kernel_size, dropout = False):
     return upsample
 
 def model():
-    inputs = layers.Input(shape= [160,160,3])
+    inputs = layers.Input(shape= [SIZE,SIZE,3])
     d1 = down(128,(3,3),False)(inputs)
     d2 = down(128,(3,3),False)(d1)
     d3 = down(256,(3,3),True)(d2)
@@ -112,14 +112,30 @@ model.summary()
 
 with tf.device('/device:GPU:0'):
     model.compile(optimizer = tf.keras.optimizers.Adam(learning_rate = 0.001), loss = 'mean_absolute_error',
-                metrics = ['acc'])
+                metrics = ['accuracy'])
     print('model compiled')
 
-    history = model.fit(train_g, train_c, epochs = 50,batch_size = 10,verbose = 0)
+    history = model.fit(train_g, train_c, epochs = 50,batch_size = 10,verbose = 1)
     print('model fitted')
     print(history.history)
     model.evaluate(test_gray_image,test_color_image)
     print('model evaluated')
+
+    plt.plot(history.history['accuracy'])
+    plt.title('Model accuracy')
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.legend(['Train'], loc='upper left')
+    plt.show()
+
+    # 7 훈련 과정 시각화 (손실)
+    plt.plot(history.history['loss'])
+    plt.title('Model loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend(['Train'], loc='upper left')
+    plt.show()
+
 # defining function to plot images pair
 def plot_images(color,grayscale,predicted):
     plt.figure(figsize=(15,15))
